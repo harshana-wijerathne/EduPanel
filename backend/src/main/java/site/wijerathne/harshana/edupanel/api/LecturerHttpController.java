@@ -2,18 +2,21 @@ package site.wijerathne.harshana.edupanel.api;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
+import site.wijerathne.harshana.edupanel.to.request.LecturerReqTO;
 
 @RestController
-@RequestMapping("/api/a1/lecturers")
+@RequestMapping("/api/v1/lecturers")
 @CrossOrigin
 public class LecturerHttpController {
 
     @ResponseStatus(HttpStatus.CREATED)
     @PostMapping(consumes = "multipart/form-data",produces = "application/json")
-    public void createNewLecturer() {}
+    public void createNewLecturer(@ModelAttribute LecturerReqTO lecturerReqTO) {
+        System.out.println(lecturerReqTO);
+    }
 
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    @PatchMapping(value = "/{lecturer-id}",consumes = "application/json")
+    @PatchMapping(value = "/{lecturer-id}",consumes = "multipart/form-data")
     public void updateLecturerDetailsViaMultipart(@PathVariable("lecturer-id") Integer lecturerId) {}
 
 
