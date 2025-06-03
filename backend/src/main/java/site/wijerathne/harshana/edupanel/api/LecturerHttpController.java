@@ -1,6 +1,7 @@
 package site.wijerathne.harshana.edupanel.api;
 
 import org.springframework.http.HttpStatus;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import site.wijerathne.harshana.edupanel.to.request.LecturerReqTO;
 
@@ -11,7 +12,7 @@ public class LecturerHttpController {
 
     @ResponseStatus(HttpStatus.CREATED)
     @PostMapping(consumes = "multipart/form-data",produces = "application/json")
-    public void createNewLecturer(@ModelAttribute LecturerReqTO lecturerReqTO) {
+    public void createNewLecturer(@ModelAttribute @Validated(LecturerReqTO.Create.class) LecturerReqTO lecturerReqTO) {
         System.out.println(lecturerReqTO);
     }
 
