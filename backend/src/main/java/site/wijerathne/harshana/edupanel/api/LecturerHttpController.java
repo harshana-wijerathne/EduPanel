@@ -12,6 +12,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 import site.wijerathne.harshana.edupanel.entity.Lecturer;
 import site.wijerathne.harshana.edupanel.entity.LinkedIn;
 import site.wijerathne.harshana.edupanel.entity.Picture;
@@ -109,8 +110,21 @@ public class LecturerHttpController {
     }
 
 
-    @GetMapping(path = "/{lecturer-id}", consumes = "application/json")
-    public void getLecturerDetails(@PathVariable("lecturer-id") Integer lecturerId) {
+    @GetMapping(path = "/{lecturer-id}", produces = "application/json")
+    public LecturerTO getLecturerDetails(@PathVariable("lecturer-id") Integer lecturerId) {
+        Lecturer lecturer = em.find(Lecturer.class, lecturerId);
+        if (lecturer == null) throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        LecturerTO lecturerTO = mapper.map(lecturer, LecturerTO.class);
+        if (lecturer.getLinkedIn() != null) {
+            lecturerTO.setLinkedin(lecturer.getLinkedIn().getUrl());
+        }
+        if (lecturer.getPicture() != null) {
+            int id = lecturer.getPicture().getLecturer().getId();
+            String url = cloudinary.url().secure(false)
+                    .generate("lecturers/"+id);
+            lecturerTO.setPicture(url);
+        }
+        return lecturerTO;
     }
 
     @GetMapping(params = "type=full-time", produces = "application/json")
