@@ -105,6 +105,32 @@ public class LecturerHttpController {
     @GetMapping(produces = "application/json")
     public List<LecturerTO> getAllLecturers() {
         TypedQuery<Lecturer> query = em.createQuery("SELECT l FROM Lecturer l", Lecturer.class);
+        return getLecturerTOList(query);
+    }
+
+
+    @GetMapping(path = "/{lecturer-id}", consumes = "application/json")
+    public void getLecturerDetails(@PathVariable("lecturer-id") Integer lecturerId) {
+    }
+
+    @GetMapping(params = "type=full-time", produces = "application/json")
+    public List<LecturerTO> getFullTimeLecturers() {
+        TypedQuery<Lecturer> query = em.createQuery("SELECT l FROM Lecturer l where l.type = site.wijerathne.harshana.edupanel.uitl.LecturerType.FULL_TIME", Lecturer.class);
+        return getLecturerTOList(query);
+    }
+
+    @GetMapping(params = "type=visiting", produces = "application/json")
+    public List<LecturerTO> getVisitingLecturers() {
+        TypedQuery<Lecturer> query = em.createQuery("SELECT l FROM Lecturer l where l.type = site.wijerathne.harshana.edupanel.uitl.LecturerType.VISITING", Lecturer.class);
+        return getLecturerTOList(query);
+    }
+
+    @GetMapping("/hi")
+    public void hi() {
+        System.out.println("hi");
+    }
+
+    private List<LecturerTO> getLecturerTOList(TypedQuery<Lecturer> query) {
         return query.getResultStream().map(lecturerEntity ->{
             LecturerTO lecturerTO = mapper.map(lecturerEntity, LecturerTO.class);
             if (lecturerEntity.getLinkedIn() != null) {
@@ -118,23 +144,5 @@ public class LecturerHttpController {
             }
             return lecturerTO;
         }).toList();
-    }
-
-
-    @GetMapping(path = "/{lecturer-id}", consumes = "application/json")
-    public void getLecturerDetails(@PathVariable("lecturer-id") Integer lecturerId) {
-    }
-
-    @GetMapping(params = "type=full-time", consumes = "application/json")
-    public void getFullTimeLecturers() {
-    }
-
-    @GetMapping(params = "type=visiting", consumes = "application/json")
-    public void getVisitingLecturers() {
-    }
-
-    @GetMapping("/hi")
-    public void hi() {
-        System.out.println("hi");
     }
 }
