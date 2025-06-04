@@ -101,6 +101,25 @@ public class LecturerHttpController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @DeleteMapping("/{lecturer-id}")
     public void deleteLecturer(@PathVariable("lecturer-id") Integer lecturerId) {
+        Lecturer lecturer = em.find(Lecturer.class, lecturerId);
+        if (lecturer == null) throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        em.getTransaction().begin();
+        try{
+            if (lecturer.getPicture() != null) {
+                String publicId = "lecturers/"+ lecturer.getPicture().getLecturer().getId(); // e.g., "lecturers/27"
+                try {
+                    Map<?, ?> result = cloudinary.uploader().destroy(publicId, ObjectUtils.emptyMap());
+                    System.out.println("Cloudinary delete result: " + result);
+                } catch (IOException e) {
+                    throw new RuntimeException("Failed to delete image from Cloudinary", e);
+                }
+            }
+            em.remove(lecturer);
+            em.getTransaction().commit();
+        }catch (Exception e){
+            em.getTransaction().rollback();
+            throw new RuntimeException(e);
+        }
     }
 
     @GetMapping(produces = "application/json")
