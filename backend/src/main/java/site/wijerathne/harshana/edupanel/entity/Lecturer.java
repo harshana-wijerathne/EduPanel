@@ -56,7 +56,7 @@ public class Lecturer implements Serializable {
     }
 
     public void setLinkedIn(LinkedIn linkedIn) {
-        if(linkedIn != null) picture.setLecturer(this);
+        if(linkedIn != null) linkedIn.setLecturer(this);
         this.linkedIn = linkedIn;
     }
 
