@@ -1,9 +1,12 @@
 package site.wijerathne.harshana.edupanel.api;
 
 import com.cloudinary.Cloudinary;
+import com.cloudinary.api.ApiResponse;
 import com.cloudinary.utils.ObjectUtils;
 import io.github.cdimascio.dotenv.Dotenv;
 import jakarta.persistence.EntityManager;
+import jakarta.persistence.TypedQuery;
+import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -16,8 +19,10 @@ import site.wijerathne.harshana.edupanel.to.LecturerTO;
 import site.wijerathne.harshana.edupanel.to.request.LecturerReqTO;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.Map;
 
+@Slf4j
 @RestController
 @RequestMapping("/api/v1/lecturers")
 @CrossOrigin
@@ -97,8 +102,22 @@ public class LecturerHttpController {
     public void deleteLecturer(@PathVariable("lecturer-id") Integer lecturerId) {
     }
 
-    @GetMapping(consumes = "application/json")
-    public void getAllLecturers() {
+    @GetMapping(produces = "application/json")
+    public List<LecturerTO> getAllLecturers() {
+        TypedQuery<Lecturer> query = em.createQuery("SELECT l FROM Lecturer l", Lecturer.class);
+        return query.getResultStream().map(lecturerEntity ->{
+            LecturerTO lecturerTO = mapper.map(lecturerEntity, LecturerTO.class);
+            if (lecturerEntity.getLinkedIn() != null) {
+                lecturerTO.setLinkedin(lecturerEntity.getLinkedIn().getUrl());
+            }
+            if (lecturerEntity.getPicture() != null) {
+                int id = lecturerEntity.getPicture().getLecturer().getId();
+                String url = cloudinary.url().secure(false)
+                        .generate("lecturers/"+id);
+                lecturerTO.setPicture(url);
+            }
+            return lecturerTO;
+        }).toList();
     }
 
 
