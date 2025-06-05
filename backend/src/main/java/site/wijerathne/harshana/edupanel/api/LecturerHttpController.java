@@ -99,41 +99,10 @@ public class LecturerHttpController {
             newLecturer.setPicture(null);
             newLecturer.setLinkedIn(null);
 
-            if (lecturerReqTO.getLinkedin() != null) {
-                newLecturer.setLinkedIn(new LinkedIn(newLecturer, lecturerReqTO.getLinkedin()));
-                em.merge(newLecturer.getLinkedIn());
-            }
-
-            if (lecturerReqTO.getPicture() != null) {
-                newLecturer.setPicture(new Picture(newLecturer, "lecturers/" + lecturerId));
-                em.merge(newLecturer.getPicture());
-                String publicId = "lecturers/" + currentLecturer.getId(); // e.g., "lecturers/27"
-                try {
-                    Map<?, ?> result = cloudinary.uploader().destroy(publicId, ObjectUtils.emptyMap());
-                    System.out.println("Cloudinary delete result: " + result);
-                } catch (IOException e) {
-                    throw new RuntimeException("Failed to delete image from Cloudinary", e);
-                }
-            }
-
-            if (newLecturer.getLinkedIn() == null && currentLecturer.getLinkedIn() != null) {
-                em.remove(currentLecturer.getLinkedIn());
-            }
-
-            if (newLecturer.getLinkedIn() == null && currentLecturer.getPicture() != null) {
-                em.remove(currentLecturer.getPicture());
-                String publicId = "lecturers/" + currentLecturer.getId(); // e.g., "lecturers/27"
-                try {
-                    Map<?, ?> result = cloudinary.uploader().destroy(publicId, ObjectUtils.emptyMap());
-                    System.out.println("Cloudinary delete result: " + result);
-                } catch (IOException e) {
-                    throw new RuntimeException("Failed to delete image from Cloudinary", e);
-                }
-            }
-
-            if (newLecturer.getLinkedIn() != null) {
-                Map uploadResult = cloudinary.uploader().upload(
-                        lecturerReqTO.getPicture().getBytes(),
+            if(lecturerReqTO.getPicture() != null && currentLecturer.getPicture() == null){
+                newLecturer.setPicture(new Picture(newLecturer,"lecturers/"+lecturerId));
+                em.persist(newLecturer.getPicture());
+                cloudinary.uploader().upload(lecturerReqTO.getPicture().getBytes(),
                         ObjectUtils.asMap(
                                 "public_id", "lecturers/" + newLecturer.getId(),
                                 "use_filename", true,
@@ -141,6 +110,32 @@ public class LecturerHttpController {
                                 "overwrite", true
                         )
                 );
+
+            } else if (lecturerReqTO.getPicture() == null && currentLecturer.getPicture() != null) {
+                em.remove(currentLecturer.getPicture());
+                cloudinary.uploader().destroy("lecturers/"+lecturerId, ObjectUtils.emptyMap());
+
+            }else {
+                newLecturer.setPicture(new Picture(newLecturer,"lecturers/"+lecturerId));
+                em.merge(newLecturer.getPicture());
+                cloudinary.uploader().upload(lecturerReqTO.getPicture().getBytes(),
+                        ObjectUtils.asMap(
+                                "public_id", "lecturers/" + newLecturer.getId(),
+                                "use_filename", true,
+                                "unique_filename", false,
+                                "overwrite", true
+                        )
+                );
+            }
+
+            if(lecturerReqTO.getLinkedin() != null && currentLecturer.getLinkedIn() == null){
+                    newLecturer.setLinkedIn(new LinkedIn(newLecturer,lecturerReqTO.getLinkedin()));
+                    em.persist(newLecturer.getLinkedIn());
+            } else if (lecturerReqTO.getLinkedin() == null && currentLecturer.getLinkedIn() != null) {
+                    em.remove(currentLecturer.getLinkedIn());
+            }else {
+                newLecturer.setLinkedIn(new LinkedIn(newLecturer,lecturerReqTO.getLinkedin()));
+                em.merge(newLecturer.getLinkedIn());
             }
 
             em.merge(newLecturer);
