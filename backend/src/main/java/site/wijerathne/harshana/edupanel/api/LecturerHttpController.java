@@ -149,7 +149,31 @@ public class LecturerHttpController {
 
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @PatchMapping(value = "/{lecturer-id}", consumes = "application/json")
-    public void updateLecturerDetailsViaJson(@PathVariable("lecturer-id") Integer lecturerId) {
+    public void updateLecturerDetailsViaJson(@PathVariable("lecturer-id") Integer lecturerId,@RequestBody @Validated LecturerTO lecturerTO) throws IOException {
+        Lecturer currentLecturer = em.find(Lecturer.class, lecturerId);
+        if(currentLecturer == null) throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        em.getTransaction().begin();
+        try {
+            Lecturer newLecturer = mapper.map(lecturerTO, Lecturer.class);
+            newLecturer.setId(lecturerId);
+            newLecturer.setPicture(currentLecturer.getPicture());
+            newLecturer.setLinkedIn(lecturerTO.getLinkedin() != null ? new LinkedIn(newLecturer,lecturerTO.getLinkedin()) : null);
+
+            if(currentLecturer.getLinkedIn() != null && newLecturer.getLinkedIn() == null) {
+                em.remove(currentLecturer.getLinkedIn());
+            }else if (currentLecturer.getLinkedIn() == null && newLecturer.getLinkedIn() != null) {
+                em.persist(newLecturer.getLinkedIn());
+            }else if (newLecturer.getLinkedIn() != null) {
+                em.merge(newLecturer.getLinkedIn());
+            }
+
+
+            em.merge(newLecturer);
+            em.getTransaction().commit();
+        }catch (Throwable e){
+            em.getTransaction().rollback();
+            throw new RuntimeException(e);
+        }
     }
 
     @ResponseStatus(HttpStatus.NO_CONTENT)
