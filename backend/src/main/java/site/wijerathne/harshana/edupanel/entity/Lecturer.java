@@ -31,11 +31,11 @@ public class Lecturer implements Serializable {
     private int displayOrder;
 
     @ToString.Exclude
-    @OneToOne(mappedBy = "lecturer",cascade = {CascadeType.REMOVE})
+    @OneToOne(mappedBy = "lecturer",cascade = {CascadeType.REMOVE,CascadeType.PERSIST})
     private Picture picture;
 
     @ToString.Exclude
-    @OneToOne(mappedBy = "lecturer",cascade = {CascadeType.REMOVE})
+    @OneToOne(mappedBy = "lecturer",cascade = {CascadeType.REMOVE,CascadeType.PERSIST})
     private LinkedIn linkedIn;
 
     public Lecturer(String name, String designation, String qualifications, LecturerType type, int displayOrder) {

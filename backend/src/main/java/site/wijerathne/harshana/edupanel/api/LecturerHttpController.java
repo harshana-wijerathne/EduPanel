@@ -1,7 +1,6 @@
 package site.wijerathne.harshana.edupanel.api;
 
 import com.cloudinary.Cloudinary;
-import com.cloudinary.api.ApiResponse;
 import com.cloudinary.utils.ObjectUtils;
 import io.github.cdimascio.dotenv.Dotenv;
 import jakarta.persistence.EntityManager;
@@ -89,7 +88,67 @@ public class LecturerHttpController {
 
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @PatchMapping(value = "/{lecturer-id}", consumes = "multipart/form-data")
-    public void updateLecturerDetailsViaMultipart(@PathVariable("lecturer-id") Integer lecturerId) {
+    public void updateLecturerDetailsViaMultipart(@PathVariable("lecturer-id") Integer lecturerId,
+                                                  @ModelAttribute @Validated(LecturerReqTO.Update.class) LecturerReqTO lecturerReqTO) throws IOException {
+        Lecturer currentLecturer = em.find(Lecturer.class, lecturerId);
+        if (currentLecturer == null) throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        em.getTransaction().begin();
+        try {
+            Lecturer newLecturer = mapper.map(lecturerReqTO, Lecturer.class);
+            newLecturer.setId(lecturerId);
+            newLecturer.setPicture(null);
+            newLecturer.setLinkedIn(null);
+
+            if (lecturerReqTO.getLinkedin() != null) {
+                newLecturer.setLinkedIn(new LinkedIn(newLecturer, lecturerReqTO.getLinkedin()));
+                em.merge(newLecturer.getLinkedIn());
+            }
+
+            if (lecturerReqTO.getPicture() != null) {
+                newLecturer.setPicture(new Picture(newLecturer, "lecturers/" + lecturerId));
+                em.merge(newLecturer.getPicture());
+                String publicId = "lecturers/" + currentLecturer.getId(); // e.g., "lecturers/27"
+                try {
+                    Map<?, ?> result = cloudinary.uploader().destroy(publicId, ObjectUtils.emptyMap());
+                    System.out.println("Cloudinary delete result: " + result);
+                } catch (IOException e) {
+                    throw new RuntimeException("Failed to delete image from Cloudinary", e);
+                }
+            }
+
+            if (newLecturer.getLinkedIn() == null && currentLecturer.getLinkedIn() != null) {
+                em.remove(currentLecturer.getLinkedIn());
+            }
+
+            if (newLecturer.getLinkedIn() == null && currentLecturer.getPicture() != null) {
+                em.remove(currentLecturer.getPicture());
+                String publicId = "lecturers/" + currentLecturer.getId(); // e.g., "lecturers/27"
+                try {
+                    Map<?, ?> result = cloudinary.uploader().destroy(publicId, ObjectUtils.emptyMap());
+                    System.out.println("Cloudinary delete result: " + result);
+                } catch (IOException e) {
+                    throw new RuntimeException("Failed to delete image from Cloudinary", e);
+                }
+            }
+
+            if (newLecturer.getLinkedIn() != null) {
+                Map uploadResult = cloudinary.uploader().upload(
+                        lecturerReqTO.getPicture().getBytes(),
+                        ObjectUtils.asMap(
+                                "public_id", "lecturers/" + newLecturer.getId(),
+                                "use_filename", true,
+                                "unique_filename", false,
+                                "overwrite", true
+                        )
+                );
+            }
+
+            em.merge(newLecturer);
+            em.getTransaction().commit();
+        } catch (Throwable e) {
+            em.getTransaction().rollback();
+            throw e;
+        }
     }
 
 
@@ -104,9 +163,9 @@ public class LecturerHttpController {
         Lecturer lecturer = em.find(Lecturer.class, lecturerId);
         if (lecturer == null) throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         em.getTransaction().begin();
-        try{
+        try {
             if (lecturer.getPicture() != null) {
-                String publicId = "lecturers/"+ lecturer.getPicture().getLecturer().getId(); // e.g., "lecturers/27"
+                String publicId = "lecturers/" + lecturer.getPicture().getLecturer().getId(); // e.g., "lecturers/27"
                 try {
                     Map<?, ?> result = cloudinary.uploader().destroy(publicId, ObjectUtils.emptyMap());
                     System.out.println("Cloudinary delete result: " + result);
@@ -116,7 +175,7 @@ public class LecturerHttpController {
             }
             em.remove(lecturer);
             em.getTransaction().commit();
-        }catch (Exception e){
+        } catch (Exception e) {
             em.getTransaction().rollback();
             throw new RuntimeException(e);
         }
@@ -140,7 +199,7 @@ public class LecturerHttpController {
         if (lecturer.getPicture() != null) {
             int id = lecturer.getPicture().getLecturer().getId();
             String url = cloudinary.url().secure(false)
-                    .generate("lecturers/"+id);
+                    .generate("lecturers/" + id);
             lecturerTO.setPicture(url);
         }
         return lecturerTO;
@@ -164,7 +223,7 @@ public class LecturerHttpController {
     }
 
     private List<LecturerTO> getLecturerTOList(TypedQuery<Lecturer> query) {
-        return query.getResultStream().map(lecturerEntity ->{
+        return query.getResultStream().map(lecturerEntity -> {
             LecturerTO lecturerTO = mapper.map(lecturerEntity, LecturerTO.class);
             if (lecturerEntity.getLinkedIn() != null) {
                 lecturerTO.setLinkedin(lecturerEntity.getLinkedIn().getUrl());
@@ -172,7 +231,7 @@ public class LecturerHttpController {
             if (lecturerEntity.getPicture() != null) {
                 int id = lecturerEntity.getPicture().getLecturer().getId();
                 String url = cloudinary.url().secure(false)
-                        .generate("lecturers/"+id);
+                        .generate("lecturers/" + id);
                 lecturerTO.setPicture(url);
             }
             return lecturerTO;
